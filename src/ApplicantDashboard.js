@@ -1,102 +1,136 @@
-
-
-
-
-
-
 import React, { useState, useEffect } from "react";
-import { ProgressBar, Dropdown } from "react-bootstrap";
-import ApplyForBursary from "./ApplyForBursary"; // Import the ApplyForBursary component
-import axios from "axios"; // Import Axios for making API calls
-import "./ApplicantDashboard.css"; // Assuming you'll style the dashboard separately
-import { useNavigate } from "react-router-dom"; // For redirecting the user
+import { ProgressBar, Dropdown, Alert } from "react-bootstrap";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import "./ApplicantDashboard.css";
 
 const ApplicantDashboard = () => {
-  const storedUser = localStorage.getItem('user');
-  console.log(storedUser)
-
-    
-
-
+  const navigate = useNavigate();
   const [applicantData, setApplicantData] = useState({
     full_name: "",
     admission_number: "",
     institution_name: "",
     email: "",
     phone_number: "",
-    status: "Pending", // Default application status
-    applied: false, // Indicates if the applicant has applied
+    application_status: "not_applied"
   });
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  setApplicantData({
-    full_name: storedUser.full_name || "", // Fallback to empty if not available
-    admission_number: storedUser.admission_number || "",
-    institution_name: storedUser.institution_name || "",
-    email: storedUser.email || "",
-    phone_number: storedUser.phone_number || "",
-    status: "Pending", // Default status
-    applied: false, // Default value
-  });
-
-  const navigate = useNavigate(); // To navigate programmatically
-  const token = localStorage.getItem("token"); // Get the token from localStorage
-
-  // Fetch applicant data from the backend when the component mounts
   useEffect(() => {
+    const token = localStorage.getItem("token");
     if (!token) {
-      console.error("No token found in localStorage");
-      navigate("/login"); // Redirect to login if no token is found
+      navigate("/login");
       return;
     }
 
     const fetchApplicantData = async () => {
-      const token = localStorage.getItem("token"); // Get the token from localStorage
-      if (!token) {
-        console.error("No token found in localStorage");
-        return;
-      }
-    
+      setIsLoading(true);
       try {
-        const response = await axios.get("http://127.0.0.1:5000/auth/user", {
+        // First, fetch user details
+        const userResponse = await axios.get("http://127.0.0.1:5000/auth/user", {
           headers: {
-            Authorization: `Bearer ${token}`, // Send the token in the Authorization header
+            Authorization: `Bearer ${token}`,
           },
         });
-        setApplicantData(response.data); // Update state with the fetched data
+
+        // Then, fetch application status
+        const applicationResponse = await axios.get("http://127.0.0.1:5000/bursary/application-status", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        console.log("User Data:", userResponse.data);
+        console.log("Application Status:", applicationResponse.data);
+
+        // Merge user data with application status
+        setApplicantData(prevData => ({
+          ...userResponse.data,
+          application_status: applicationResponse.data.status || "not_applied"
+        }));
+
+        setError(null);
       } catch (error) {
-        console.error("Error fetching applicant data:", error.response || error);
-        // Handle the error (e.g., show an error message)
+        console.error("Error fetching applicant data:", error.response ? error.response.data : error);
+        setError(error.response?.data?.message || "Failed to fetch applicant data");
+      } finally {
+        setIsLoading(false);
       }
     };
-    
-
-
 
     fetchApplicantData();
-  }, [token, navigate]); // Rerun effect if the token changes (e.g., on logout)
+  }, [navigate]);
 
-  // Function to render the status message based on the application status
-  const renderStatusMessage = () => {
-    switch (applicantData.status) {
-      case "Approved":
+  const handleApplyForBursary = async () => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post("http://127.0.0.1:5000/bursary/apply", {}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log("Application Response:", response.data);
+
+      // Update status to pending after successful application
+      setApplicantData(prevData => ({
+        ...prevData,
+        application_status: "pending"
+      }));
+
+      setError(null);
+    } catch (error) {
+      console.error("Error applying for bursary:", error.response ? error.response.data : error);
+      setError(error.response?.data?.message || "Failed to submit bursary application");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderApplicationStatus = () => {
+    if (isLoading) {
+      return <div>Loading application status...</div>;
+    }
+
+    switch (applicantData.application_status) {
+      case "approved":
         return (
-          <div className="status approved">
-            <h4>Congratulations! Your application has been approved.</h4>
-            <ProgressBar now={100} label="Approved" variant="success" />
+          <div className="status-container approved">
+            <h3>Bursary Approved</h3>
+            <p>Congratulations! Your bursary application has been approved.</p>
+            <ProgressBar now={100} variant="success" label="Approved" />
           </div>
         );
-      case "Rejected":
+      case "rejected":
         return (
-          <div className="status rejected">
-            <h4>Sorry, your application was rejected.</h4>
-            <ProgressBar now={100} label="Rejected" variant="danger" />
+          <div className="status-container rejected">
+            <h3>Application Rejected</h3>
+            <p>We regret to inform you that your bursary application was not successful.</p>
+            <ProgressBar now={100} variant="danger" label="Rejected" />
+          </div>
+        );
+      case "pending":
+        return (
+          <div className="status-container pending">
+            <h3>Application Under Review</h3>
+            <p>Your bursary application is currently being processed.</p>
+            <ProgressBar now={60} variant="warning" label="Pending" />
           </div>
         );
       default:
         return (
-          <div className="status pending">
-            <h4>Your application is under review.</h4>
-            <ProgressBar now={50} label="Pending" variant="warning" />
+          <div className="status-container not-applied">
+            <h3>Apply for Bursary</h3>
+            <p>You have not yet submitted a bursary application.</p>
+            <button 
+              className="btn btn-primary" 
+              onClick={handleApplyForBursary}
+              disabled={isLoading}
+            >
+              {isLoading ? "Submitting..." : "Apply Now"}
+            </button>
           </div>
         );
     }
@@ -104,65 +138,43 @@ const ApplicantDashboard = () => {
 
   return (
     <div className="applicant-dashboard">
-      {/* Profile Menu at the top */}
-      <ProfileMenu />
+      <div className="dashboard-header">
+        <h1>Applicant Dashboard</h1>
+        <Dropdown>
+          <Dropdown.Toggle variant="outline-secondary">
+            Profile Menu
+          </Dropdown.Toggle>
+          <Dropdown.Menu>
+            <Dropdown.Item>Profile Settings</Dropdown.Item>
+            <Dropdown.Item>Logout</Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
+      </div>
+
+      {error && (
+        <Alert variant="danger" onClose={() => setError(null)} dismissible>
+          {error}
+        </Alert>
+      )}
 
       <div className="dashboard-content">
-        {/* Left Sidebar: Applicant Information */}
-        <ApplicantInfo applicantData={applicantData} />
+        <div className="applicant-info">
+          <h2>Personal Details</h2>
+          <div className="info-grid">
+            <div><strong>Name:</strong> {applicantData.full_name}</div>
+            <div><strong>Admission Number:</strong> {applicantData.admission_number}</div>
+            <div><strong>Institution:</strong> {applicantData.institution_name}</div>
+            <div><strong>Email:</strong> {applicantData.email}</div>
+            <div><strong>Phone:</strong> {applicantData.phone_number}</div>
+          </div>
+        </div>
 
-        {/* Right Content: Application Progress or Bursary Form */}
-        <div className="progress-section">
-          <h2>Application Status</h2>
-          {applicantData.applied ? (
-            renderStatusMessage()
-          ) : (
-            <ApplyForBursary onApply={() => setApplicantData({ ...applicantData, applied: true })} />
-          )}
+        <div className="application-status">
+          {renderApplicationStatus()}
         </div>
       </div>
     </div>
   );
 };
-
-// Profile Menu Component
-const ProfileMenu = () => (
-  <div className="profile-menu">
-    <Dropdown>
-      <Dropdown.Toggle variant="success" id="dropdown-basic">
-        Profile
-      </Dropdown.Toggle>
-
-      <Dropdown.Menu>
-        <Dropdown.Item href="#/settings">Settings</Dropdown.Item>
-        <Dropdown.Item href="#/logout">Logout</Dropdown.Item>
-      </Dropdown.Menu>
-    </Dropdown>
-  </div>
-);
-
-// Left Sidebar Component: Applicant Information
-const ApplicantInfo = ({ applicantData }) => (
-  <div className="applicant-info">
-    <h3>Applicant Information</h3>
-    <ul>
-      <li>
-        <strong>Full Name:</strong> {applicantData.full_name}
-      </li>
-      <li>
-        <strong>Admission Number:</strong> {applicantData.admission_number}
-      </li>
-      <li>
-        <strong>Institution Name:</strong> {applicantData.institution_name}
-      </li>
-      <li>
-        <strong>Email:</strong> {applicantData.email}
-      </li>
-      <li>
-        <strong>Phone Number:</strong> {applicantData.phone_number}
-      </li>
-    </ul>
-  </div>
-);
 
 export default ApplicantDashboard;
