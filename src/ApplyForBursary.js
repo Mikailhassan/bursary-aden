@@ -6,9 +6,11 @@ import React, { useState, useEffect } from "react";
 import axios from "axios"; // Import axios for making API calls
 import { Form, Button, Row, Col } from "react-bootstrap";
 import Stepper from 'react-stepper-horizontal';
+import { useNavigate } from "react-router-dom";
 import './ApplyForBursary.css'; // Ensure this file includes the necessary styles
 
 const ApplyForBursary = () => {
+    const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState(0); // Step starts at 0
     const [formData, setFormData] = useState({
         admission: '',
@@ -29,7 +31,7 @@ const ApplyForBursary = () => {
     });
 
     const [errors, setErrors] = useState({});
-    const [bursaryId, setBursaryId] = useState(null); // For updating existing bursary
+    const [bursaryId, setBursaryId] = useState(null); 
 
     // Step 1: UseEffect to fetch existing application data if editing
     useEffect(() => {
@@ -118,7 +120,8 @@ const ApplyForBursary = () => {
                     if (!bursaryId) {
                         setBursaryId(response.data.id);
                     }
-                    alert("Form submitted successfully!");
+                    // Navigate to Applicant Dashboard after successful submission
+                    navigate('/get-bursary-status/${userResponse.data.admission_number}');
                 })
                 .catch(error => {
                     console.error("Error submitting form:", error.response?.data || error.message);
@@ -437,222 +440,3 @@ const ApplyForBursary = () => {
 
 export default ApplyForBursary;
 
-
-
-
-
-
-
-
-// import React, { useState, useEffect } from "react";
-// import axios from "axios";
-// import { Form, Button, Row, Col } from "react-bootstrap";
-// import Stepper from 'react-stepper-horizontal';
-// import './ApplyForBursary.css';
-
-// const ApplyForBursary = () => {
-//     const [currentStep, setCurrentStep] = useState(0);
-//     const [formData, setFormData] = useState({
-//         surname: '',
-//         firstName: '',
-//         gender: '',
-//         dob: '',
-//         nationalID: '',
-//         phoneNumber: '',
-//         email: '',
-//         institutionType: '',
-//         institutionName: '',
-//         indexNumber: '',
-//         county: '',
-//     });
-
-//     const [errors, setErrors] = useState({});
-//     const [bursaryId, setBursaryId] = useState(null);
-
-//     // Fetch existing application data if editing
-//     useEffect(() => {
-//         if (bursaryId) {
-//             axios.get(`http://127.0.0.1:5000/applicants/${bursaryId}`)
-//                 .then(response => {
-//                     setFormData(response.data);
-//                 })
-//                 .catch(error => {
-//                     console.error("Error fetching applicant data:", error.message || error);
-//                 });
-//         }
-//     }, [bursaryId]);
-
-//     // Handle form input changes
-//     const handleInputChange = (e) => {
-//         const { name, value } = e.target;
-//         setFormData({
-//             ...formData,
-//             [name]: value,
-//         });
-//     };
-
-//     // Form validation logic
-//     const validateStep = () => {
-//         let newErrors = {};
-//         if (currentStep === 0) {
-//             if (!formData.surname.trim()) newErrors.surname = 'Surname is required';
-//             if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-//             if (!formData.gender) newErrors.gender = 'Gender is required';
-//         } else if (currentStep === 1) {
-//             if (!formData.dob) newErrors.dob = 'Date of birth is required';
-//             if (!formData.nationalID.trim()) newErrors.nationalID = 'National ID is required';
-//             if (!formData.phoneNumber.trim()) newErrors.phoneNumber = 'Phone number is required';
-//             if (!formData.email.trim() || !/\S+@\S+\.\S+/.test(formData.email)) {
-//                 newErrors.email = 'A valid email is required';
-//             }
-//         } else if (currentStep === 2) {
-//             if (!formData.institutionType) newErrors.institutionType = 'Institution type is required';
-//             if (!formData.institutionName.trim()) newErrors.institutionName = 'Institution name is required';
-//             if (!formData.county.trim()) newErrors.county = 'County is required';
-//         }
-//         setErrors(newErrors);
-//         return Object.keys(newErrors).length === 0;
-//     };
-
-//     // Navigate to the next step
-//     const nextStep = () => {
-//         if (validateStep()) {
-//             setCurrentStep((prevStep) => prevStep + 1);
-//         }
-//     };
-
-//     // Navigate to the previous step
-//     const prevStep = () => {
-//         setCurrentStep((prevStep) => prevStep - 1);
-//     };
-
-//     // Handle form submission
-//     const handleSubmit = (e) => {
-//         e.preventDefault();
-//         if (validateStep()) {
-//             const method = bursaryId ? "PUT" : "POST";
-//             const url = bursaryId
-//                 ? `http://127.0.0.1:5000/apply/${bursaryId}`
-//                 : "http://127.0.0.1:5000/apply";
-
-//             axios({
-//                 method,
-//                 url,
-//                 data: formData,
-//                 headers: { 'Content-Type': 'application/json' },
-//             })
-//                 .then(response => {
-//                     if (!bursaryId) setBursaryId(response.data.id); // Set bursary ID for updates
-//                     console.log('Form submitted successfully:', response.data);
-//                 })
-//                 .catch(error => {
-//                     console.error("Error submitting form:", error.message || error);
-//                 });
-//         }
-//     };
-
-//     // Step definitions
-//     const steps = [
-//         { title: 'Personal Info' },
-//         { title: 'Identification' },
-//         { title: 'Institution Info' },
-//         { title: 'Review & Submit' },
-//     ];
-
-//     // Render content for the current step
-//     const displayStep = () => {
-//         switch (currentStep) {
-//             case 0:
-//                 return (
-//                     <Form>
-//                         <Row>
-//                             <Col md={6}>
-//                                 <Form.Group>
-//                                     <Form.Label>Surname</Form.Label>
-//                                     <Form.Control
-//                                         type="text"
-//                                         name="surname"
-//                                         value={formData.surname}
-//                                         onChange={handleInputChange}
-//                                         isInvalid={!!errors.surname}
-//                                     />
-//                                     <Form.Control.Feedback type="invalid">{errors.surname}</Form.Control.Feedback>
-//                                 </Form.Group>
-//                             </Col>
-//                             <Col md={6}>
-//                                 <Form.Group>
-//                                     <Form.Label>First Name</Form.Label>
-//                                     <Form.Control
-//                                         type="text"
-//                                         name="firstName"
-//                                         value={formData.firstName}
-//                                         onChange={handleInputChange}
-//                                         isInvalid={!!errors.firstName}
-//                                     />
-//                                     <Form.Control.Feedback type="invalid">{errors.firstName}</Form.Control.Feedback>
-//                                 </Form.Group>
-//                             </Col>
-//                         </Row>
-//                         <Row>
-//                             <Col md={6}>
-//                                 <Form.Group>
-//                                     <Form.Label>Gender</Form.Label>
-//                                     <Form.Control
-//                                         as="select"
-//                                         name="gender"
-//                                         value={formData.gender}
-//                                         onChange={handleInputChange}
-//                                         isInvalid={!!errors.gender}
-//                                     >
-//                                         <option value="">Select Gender</option>
-//                                         <option value="Male">Male</option>
-//                                         <option value="Female">Female</option>
-//                                     </Form.Control>
-//                                     <Form.Control.Feedback type="invalid">{errors.gender}</Form.Control.Feedback>
-//                                 </Form.Group>
-//                             </Col>
-//                         </Row>
-//                     </Form>
-//                 );
-//             case 1:
-//                 return (
-//                     <Form>
-//                         {/* Add Identification fields */}
-//                     </Form>
-//                 );
-//             case 2:
-//                 return (
-//                     <Form>
-//                         {/* Add Institution Info fields */}
-//                     </Form>
-//                 );
-//             case 3:
-//                 return (
-//                     <div>
-//                         <h3>Review & Submit</h3>
-//                         {/* Add Review Content */}
-//                     </div>
-//                 );
-//             default:
-//                 return null;
-//         }
-//     };
-
-//     return (
-//         <div className="bursary-form-container">
-//             <h2>Bursary Application Form</h2>
-//             <Stepper steps={steps} activeStep={currentStep} />
-//             <div className="form-step-content">{displayStep()}</div>
-//             <div className="form-navigation">
-//                 {currentStep > 0 && <Button onClick={prevStep}>Previous</Button>}
-//                 {currentStep < steps.length - 1 ? (
-//                     <Button onClick={nextStep}>Next</Button>
-//                 ) : (
-//                     <Button onClick={handleSubmit}>Submit</Button>
-//                 )}
-//             </div>
-//         </div>
-//     );
-// };
-
-// export default ApplyForBursary;

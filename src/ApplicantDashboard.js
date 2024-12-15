@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { ProgressBar, Dropdown, Alert } from "react-bootstrap";
+import { ProgressBar, Dropdown, Alert, Button } from "react-bootstrap";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "./ApplicantDashboard.css";
+
+const API_BASE_URL = "http://127.0.0.1:8000"; // Backend base URL
 
 const ApplicantDashboard = () => {
   const navigate = useNavigate();
@@ -12,7 +14,8 @@ const ApplicantDashboard = () => {
     institution_name: "",
     email: "",
     phone_number: "",
-    application_status: "not_applied"
+    application_status: "not_applied",
+    application_history: []
   });
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,33 +30,62 @@ const ApplicantDashboard = () => {
     const fetchApplicantData = async () => {
       setIsLoading(true);
       try {
-        // First, fetch user details
-        const userResponse = await axios.get("http://127.0.0.1:5000/auth/user", {
+        // Fetch user details
+        const userResponse = await axios.get(`${API_BASE_URL}/auth/user`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        // Then, fetch application status
-        const applicationResponse = await axios.get("http://127.0.0.1:5000/bursary/application-status", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        console.log("User Response:", userResponse.data);  // Debug log
 
-        console.log("User Data:", userResponse.data);
-        console.log("Application Status:", applicationResponse.data);
+        // Fetch application status and history using admission number from user details
+        const applicationResponse = await axios.get(
+          `${API_BASE_URL}/get-bursary-status/${userResponse.data.admission_number}`, 
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        
+        console.log("Application Response:", applicationResponse.data);  // Debug log
 
-        // Merge user data with application status
+        // Merge user data with application status and history
         setApplicantData(prevData => ({
           ...userResponse.data,
-          application_status: applicationResponse.data.status || "not_applied"
+          application_status: applicationResponse.data.status || "not_applied",
+          application_history: applicationResponse.data.history || []
         }));
 
         setError(null);
       } catch (error) {
-        console.error("Error fetching applicant data:", error.response ? error.response.data : error);
-        setError(error.response?.data?.message || "Failed to fetch applicant data");
+        console.error("Full Error Object:", error);  // Detailed error logging
+        
+        // More specific error handling
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          console.error("Error Response Data:", error.response.data);
+          console.error("Error Response Status:", error.response.status);
+          
+          if (error.response.status === 401) {
+            // Token might be expired, redirect to login
+            localStorage.removeItem("token");
+            navigate("/login");
+          }
+          
+          setError(
+            error.response.data?.message || 
+            error.response.data?.error || 
+            "Failed to fetch applicant data"
+          );
+        } else if (error.request) {
+          // The request was made but no response was received
+          setError("No response received from server. Please check your network connection.");
+        } else {
+          // Something happened in setting up the request
+          setError("Error setting up the request. " + error.message);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -62,31 +94,10 @@ const ApplicantDashboard = () => {
     fetchApplicantData();
   }, [navigate]);
 
-  const handleApplyForBursary = async () => {
-    setIsLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.post("http://127.0.0.1:5000/bursary/apply", {}, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      console.log("Application Response:", response.data);
-
-      // Update status to pending after successful application
-      setApplicantData(prevData => ({
-        ...prevData,
-        application_status: "pending"
-      }));
-
-      setError(null);
-    } catch (error) {
-      console.error("Error applying for bursary:", error.response ? error.response.data : error);
-      setError(error.response?.data?.message || "Failed to submit bursary application");
-    } finally {
-      setIsLoading(false);
-    }
+  
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/login");
   };
 
   const renderApplicationStatus = () => {
@@ -124,16 +135,53 @@ const ApplicantDashboard = () => {
           <div className="status-container not-applied">
             <h3>Apply for Bursary</h3>
             <p>You have not yet submitted a bursary application.</p>
-            <button 
-              className="btn btn-primary" 
-              onClick={handleApplyForBursary}
-              disabled={isLoading}
+            <Button 
+              variant="primary" 
+              onClick={() => navigate("/apply-for-bursary")}
             >
-              {isLoading ? "Submitting..." : "Apply Now"}
-            </button>
+              Apply Now
+            </Button>
           </div>
         );
     }
+  };
+
+  const renderApplicationHistory = () => {
+    if (!applicantData.application_history || applicantData.application_history.length === 0) {
+      return <p>No application history found.</p>;
+    }
+
+    return (
+      <div className="application-history">
+        <h3>Application History</h3>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {applicantData.application_history.map((entry, index) => (
+              <tr key={index}>
+                <td>{new Date(entry.date).toLocaleString()}</td>
+                <td>
+                  <span className={`badge badge-${
+                    entry.status === 'approved' ? 'success' : 
+                    entry.status === 'rejected' ? 'danger' : 
+                    entry.status === 'pending' ? 'warning' : 'secondary'
+                  }`}>
+                    {entry.status}
+                  </span>
+                </td>
+                <td>{entry.details}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
   };
 
   return (
@@ -146,7 +194,7 @@ const ApplicantDashboard = () => {
           </Dropdown.Toggle>
           <Dropdown.Menu>
             <Dropdown.Item>Profile Settings</Dropdown.Item>
-            <Dropdown.Item>Logout</Dropdown.Item>
+            <Dropdown.Item onClick={handleLogout}>Logout</Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>
       </div>
@@ -171,6 +219,10 @@ const ApplicantDashboard = () => {
 
         <div className="application-status">
           {renderApplicationStatus()}
+        </div>
+
+        <div className="application-history-container">
+          {renderApplicationHistory()}
         </div>
       </div>
     </div>

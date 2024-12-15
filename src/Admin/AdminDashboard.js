@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Routes, Route, Link } from 'react-router-dom';
@@ -16,10 +10,14 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 function AdminDashboard() {
     const [applicants, setApplicants] = useState([]);
     const [modalImage, setModalImage] = useState(null);
-    const [modalType, setModalType] = useState(null); // To track if it's ID or Birth Certificate
-    const [feedback, setFeedback] = useState(''); // For feedback messages
+    const [modalType, setModalType] = useState(null);
+    const [feedback, setFeedback] = useState('');
 
     useEffect(() => {
+        fetchApplicants();
+    }, []);
+
+    const fetchApplicants = () => {
         axios
             .get('http://127.0.0.1:5000/applicants')
             .then((response) => {
@@ -29,29 +27,51 @@ function AdminDashboard() {
             })
             .catch((error) => {
                 console.error('Error fetching applicants:', error);
-            });
-    }, []);
-
-    const handleStatusChange = (id, status) => {
-        axios
-            .patch(`http://127.0.0.1:5000/applicants/${id}`, { status })
-            .then(() => {
-                setApplicants((prevState) =>
-                    prevState.map((applicant) =>
-                        applicant.id === id
-                            ? { ...applicant, status: status }
-                            : applicant
-                    )
-                );
-                setFeedback(`The applicant has been ${status.toLowerCase()} successfully.`);
-                setTimeout(() => setFeedback(''), 3000); // Clear feedback after 3 seconds
-            })
-            .catch((error) => {
-                console.error('Error updating status:', error);
-                setFeedback('An error occurred while updating the status.');
+                setFeedback('Failed to fetch applicants. Please try again.');
                 setTimeout(() => setFeedback(''), 3000);
             });
     };
+
+    const handleStatusChange = (applicant, status) => {
+        // Combine status update and email sending
+        axios
+            .patch(`http://127.0.0.1:5000/applicants/${applicant.id}`, { status })
+            .then(() => {
+                // Send email notification
+                return axios.post('http://127.0.0.1:5000/send-email', {
+                    recipient: applicant.email,
+                    subject: `Bursary Application Status Update - ${status}`,
+                    body: `Dear ${applicant.full_name},\n\nYour bursary application has been ${status.toLowerCase()}. 
+                    
+Status: ${status}
+Admission Number: ${applicant.admission}
+Institution: ${applicant.institution_name}
+
+If you have any questions, please contact our administrative office.
+
+Best regards,
+Bursary Administrative Team`
+                });
+            })
+            .then(() => {
+                // Update local state after successful status and email update
+                setApplicants((prevState) =>
+                    prevState.map((a) =>
+                        a.id === applicant.id
+                            ? { ...a, status: status }
+                            : a
+                    )
+                );
+                setFeedback(`The applicant has been ${status.toLowerCase()} successfully and notified via email.`);
+                setTimeout(() => setFeedback(''), 3000);
+            })
+            .catch((error) => {
+                console.error('Error updating status or sending email:', error);
+                setFeedback('An error occurred while processing the application.');
+                setTimeout(() => setFeedback(''), 3000);
+            });
+    };
+
     const openModal = (imageUrl, type) => {
         setModalImage(imageUrl);
         setModalType(type);
@@ -151,7 +171,7 @@ function AdminDashboard() {
                                                 <td>
                                                     <button
                                                         onClick={() =>
-                                                            handleStatusChange(applicant.id, 'Approved')
+                                                            handleStatusChange(applicant, 'Approved')
                                                         }
                                                         disabled={applicant.status === 'Approved'}
                                                         className="btn btn-success btn-sm"
@@ -160,12 +180,21 @@ function AdminDashboard() {
                                                     </button>
                                                     <button
                                                         onClick={() =>
-                                                            handleStatusChange(applicant.id, 'Rejected')
+                                                            handleStatusChange(applicant, 'Rejected')
                                                         }
                                                         disabled={applicant.status === 'Rejected'}
                                                         className="btn btn-danger btn-sm"
                                                     >
                                                         Reject
+                                                    </button>
+                                                    <button
+                                                        onClick={() =>
+                                                            handleStatusChange(applicant, 'Pending')
+                                                        }
+                                                        disabled={applicant.status === 'Pending'}
+                                                        className="btn btn-warning btn-sm"
+                                                    >
+                                                        Pending
                                                     </button>
                                                 </td>
                                             </tr>
@@ -173,7 +202,7 @@ function AdminDashboard() {
                                     </tbody>
                                 </table>
 
-                                {/* Modal */}
+                                {/* Modal for document preview */}
                                 {modalImage && (
                                     <div className="modal show d-block" tabIndex="-1">
                                         <div className="modal-dialog modal-lg">

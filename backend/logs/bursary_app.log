@@ -1,0 +1,36 @@
+2024-12-12 20:29:23,488 INFO: Bursary Application Startup [in /root/projects/bursary-app/backend/app.py:83]
+2024-12-12 21:21:09,298 ERROR: Registration error: (sqlite3.OperationalError) no such table: user
+[SQL: SELECT user.id AS user_id, user.full_name AS user_full_name, user.admission_number AS user_admission_number, user.institution_name AS user_institution_name, user.email AS user_email, user.phone_number AS user_phone_number, user.password AS user_password 
+FROM user 
+WHERE user.email = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('mikailismail260@gmail.com', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /root/projects/bursary-app/backend/app.py:265]
+2024-12-12 21:22:05,560 ERROR: Registration error: (sqlite3.OperationalError) no such table: user
+[SQL: SELECT user.id AS user_id, user.full_name AS user_full_name, user.admission_number AS user_admission_number, user.institution_name AS user_institution_name, user.email AS user_email, user.phone_number AS user_phone_number, user.password AS user_password 
+FROM user 
+WHERE user.email = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('mikailismail260@gmail.com', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /root/projects/bursary-app/backend/app.py:265]
+2024-12-12 21:25:11,846 ERROR: Registration error: (sqlite3.OperationalError) no such table: user
+[SQL: SELECT user.id AS user_id, user.full_name AS user_full_name, user.admission_number AS user_admission_number, user.institution_name AS user_institution_name, user.email AS user_email, user.phone_number AS user_phone_number, user.password AS user_password 
+FROM user 
+WHERE user.email = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('mikailismail260@gmail.com', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /root/projects/bursary-app/backend/app.py:265]
+2024-12-12 21:25:18,143 ERROR: Registration error: (sqlite3.OperationalError) no such table: user
+[SQL: SELECT user.id AS user_id, user.full_name AS user_full_name, user.admission_number AS user_admission_number, user.institution_name AS user_institution_name, user.email AS user_email, user.phone_number AS user_phone_number, user.password AS user_password 
+FROM user 
+WHERE user.email = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('mikailismail260@gmail.com', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /root/projects/bursary-app/backend/app.py:265]
+2024-12-12 21:25:35,303 ERROR: Registration error: (sqlite3.OperationalError) no such table: user
+[SQL: SELECT user.id AS user_id, user.full_name AS user_full_name, user.admission_number AS user_admission_number, user.institution_name AS user_institution_name, user.email AS user_email, user.phone_number AS user_phone_number, user.password AS user_password 
+FROM user 
+WHERE user.email = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('mikailismail260@gmail.com', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /root/projects/bursary-app/backend/app.py:265]

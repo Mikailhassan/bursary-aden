@@ -1,62 +1,13 @@
-// import React from 'react';
-// import { Container, Row, Col, Card } from 'react-bootstrap';
-
-// function Profile({ user }) {
-//   return (
-//     <Container className="mt-5">
-//       <Row className="justify-content-center">
-//         <Col md={8}>
-//           <Card>
-//             <Card.Header>
-//               <h3>Welcome, {user ? user.name : 'User'}!</h3>
-//             </Card.Header>
-//             <Card.Body>
-//               <h5>Your Profile Information</h5>
-//               <ul>
-//                 <li><strong>Name:</strong> {user ? user.name : 'N/A'}</li>
-//                 <li><strong>Email:</strong> {user ? user.email : 'N/A'}</li>
-//                 {/* Add other user details here */}
-//               </ul>
-
-//               {/* If you're building a bursary system, you can show user applications */}
-//               <h5>Your Bursary Applications</h5>
-//               {/* You can render the user's bursary applications here if that data is available */}
-//               <ul>
-//                 {/* Mock Example: Display some user applications or information */}
-//                 <li>Bursary Application #1: <strong>Pending</strong></li>
-//                 <li>Bursary Application #2: <strong>Approved</strong></li>
-//               </ul>
-//             </Card.Body>
-//           </Card>
-//         </Col>
-//       </Row>
-//     </Container>
-//   );
-// }
-
-// export default Profile;
-
-
-
-
-
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert, ProgressBar } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Alert, ProgressBar, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 
 function Profile() {
-  const [student, setStudent] = useState({
-    full_Name: 'Aden Daiy',
-    schoolName: 'Garissa University',
-    admissionNumber: 'GU2023001',
-    email: 'adendaiy@example.com',
-    phoneNumber: '0720123456',
-  });
-
+  const [student, setStudent] = useState(null);
   const [hasApplied, setHasApplied] = useState(false);
-  const [bursaryStatus, setBursaryStatus] = useState(null); // Status: pending, approved, rejected
+  const [bursaryStatus, setBursaryStatus] = useState(null);
   const [applicationData, setApplicationData] = useState({
     familyIncome: '',
     reason: '',
@@ -64,25 +15,36 @@ function Profile() {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Simulate fetching bursary application status
+  // Fetch student profile and application status
   useEffect(() => {
-    // Call backend API to check if the student has already applied
-    const fetchApplicationStatus = async () => {
+    const fetchStudentProfile = async () => {
       try {
-        const res = await axios.get('http://127.0.0.1:5000/bursary-status', {
-          params: { admissionNumber: student.admissionNumber },
+        // Fetch student profile
+        const profileResponse = await axios.get('http://127.0.0.1:5000/student-profile');
+        setStudent(profileResponse.data);
+
+        // Fetch bursary application status
+        const statusResponse = await axios.get('http://127.0.0.1:5000/bursary-status', {
+          params: { admissionNumber: profileResponse.data.admissionNumber },
         });
-        if (res.data.hasApplied) {
+
+        if (statusResponse.data.hasApplied) {
           setHasApplied(true);
-          setBursaryStatus(res.data.status); // pending, approved, rejected
+          setBursaryStatus(statusResponse.data.status);
         }
+
+        setIsLoading(false);
       } catch (err) {
-        console.log('Error fetching application status:', err);
+        console.error('Error fetching student profile or bursary status:', err);
+        setError('Failed to load student profile');
+        setIsLoading(false);
       }
     };
-    fetchApplicationStatus();
-  }, [student.admissionNumber]);
+
+    fetchStudentProfile();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -101,9 +63,9 @@ function Profile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Submit bursary application
     try {
       const formData = new FormData();
+      formData.append('admissionNumber', student.admissionNumber);
       formData.append('familyIncome', applicationData.familyIncome);
       formData.append('reason', applicationData.reason);
       formData.append('supportingDocuments', applicationData.supportingDocuments);
@@ -116,10 +78,29 @@ function Profile() {
 
       setSuccess('Bursary application submitted successfully.');
       setHasApplied(true);
+      setBursaryStatus('pending');
     } catch (err) {
       setError('Failed to submit the application.');
     }
   };
+
+  if (isLoading) {
+    return (
+      <Container className="d-flex justify-content-center align-items-center" style={{height: '100vh'}}>
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container className="mt-5">
+        <Alert variant="danger">{error}</Alert>
+      </Container>
+    );
+  }
 
   return (
     <Container className="mt-5">

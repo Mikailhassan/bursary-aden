@@ -656,25 +656,24 @@
 // export default Login;
 
 
-
-
-
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Container, Form, Button, Row, Col, Alert } from 'react-bootstrap';
+import { useAuth } from './AuthContext';
 
 function Login() {
-  const [email, setEmail] = useState(''); // Email state
-  const [password, setPassword] = useState(''); // Password state
-  const [error, setError] = useState(''); // Error message state
-  const [success, setSuccess] = useState(''); // Success message state
-  const [userData, setUserData] = useState(''); // User data state
-  const navigate = useNavigate(); // Navigation hook
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
-    e.preventDefault(); // Prevent default form submission behavior
-    setError(''); // Clear previous errors
-    setSuccess(''); // Clear previous success message
+    e.preventDefault();
+    setError('');
+    setSuccess('');
 
     try {
       const response = await fetch('http://127.0.0.1:5000/auth/login', {
@@ -686,31 +685,25 @@ function Login() {
       });
 
       if (!response.ok) {
-        // Handle HTTP errors
         const errorData = await response.json();
         throw new Error(errorData.message || 'Login failed');
       }
 
-      const data = await response.json(); // Parse JSON response
-      const { user, token } = data; // Extract user and token from the response
+      const data = await response.json();
+      const { user, token } = data;
 
-      // Update application state
-      setUserData(user);
+      // Use the login method from AuthContext
+      login(user, token);
 
-      // Save data to localStorage
-      localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('token', token);
-
-      // Set success message
       setSuccess('Login successful! Redirecting...');
 
-      // Redirect to ApplicantDashboard after a delay
+      // Temporarily send all users to AdminDashboard
       setTimeout(() => {
-        navigate('/ApplicantDashboard');
-      }, 2000); // 2-second delay
+        navigate('/AdminDashboard');
+      }, 2000);
 
     } catch (err) {
-      console.error('Login error:', err.message); // Debugging log
+      console.error('Login error:', err.message);
       setError(err.message || 'Invalid credentials or server error. Please try again.');
     }
   };
@@ -718,7 +711,7 @@ function Login() {
   return (
     <div
       style={{
-        backgroundImage: "url('/images/GERISTRATION BACKGROUND.jpg')", // Background image URL
+        backgroundImage: "url('/images/GERISTRATION BACKGROUND.jpg')",
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         minHeight: '100vh',
